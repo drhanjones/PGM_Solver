@@ -17,4 +17,15 @@ class BNReasoner:
 
     # TODO: This is where your methods should go
 
+    def network_prune(self, Q, e):
+        pass
+
+    def d_separation(self, X,Y,Z):
+        pass
+
+    def independence(self, X, Y, Z):
+        pass
+
+    def calulate_marginalisation(self, X):
+        pass
 
