@@ -163,7 +163,63 @@ class BNReasoner:
 
         return df_ret, df
 
+def test_factor_multiplication():
+    """
+    
 
+    Parameters
+    ----------
+    factor1 : Dataframe CPT of first factor.
+    factor2 : Dataframe CPT of second factor.
+
+    Returns
+    -------
+    None. Prints out checks for a test case of factor multiplication 
+
+    """
+    dog_example_path = 'testing/dog_problem.BIFXML'
+
+    dog_bn = BNReasoner(dog_example_path)
+
+    x = dog_bn.bn.get_all_cpts()
+
+        
+    print('TEST CASE: factor multiplication:')
+    print('Testing with inputs Light on and Dog out:')
+    print('Light on \n ----- \n')
+    print(x['light-on'])
+    print('Dog out \n ----- \n')
+    print(x['dog-out'])
+    print("\n Factor multiplication \n --------------- \n")
+    asdf_factoreddf = dog_bn.factor_multiplication(x['light-on'],x['dog-out'])
+    
+    
+    # Test output with predefined correct test case
+    correctoutputs = [0.594, 0.006, 0.582,
+    0.018,
+    0.396,
+    0.004,
+    0.388,
+    0.012,
+    0.045000000000000005,
+    0.005000000000000001,
+    0.015,
+    0.034999999999999996,
+    0.855,
+    0.095,
+    0.285,
+    0.6649999999999999]
+    incorrect_cases = []
+    for i in range(len(asdf_factoreddf['p'])):
+        if (correctoutputs[i] != asdf_factoreddf['p'][i]):
+            incorrect_cases.append(asdf_factoreddf['p'][i])
+    
+    if not incorrect_cases:
+        print('Factor Multiplication tested correct')
+    else:
+        print('Factor Multiplication tested incorrect')
+
+    
 dog_example_path = 'testing/dog_problem.BIFXML'
 
 dog_bn = BNReasoner(dog_example_path)
@@ -178,5 +234,6 @@ gby_list = [e for e in list(df_test.columns) if e not in ['p',sum_column]]
 
 df_test.drop(sum_column,axis=1).groupby(by=gby_list).sum().reset_index()
 
-print("\n Factor multiplication \n --------------- \n")
-dog_bn.factor_multiplication(x['light-on'],x['dog-out'])
+
+# run the factor multiplication test
+test_factor_multiplication()
