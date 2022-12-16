@@ -31,7 +31,7 @@ class BNReasoner:
     def factor_multiplication(self, f, g):
         common_columns = list(set(f.columns) & set(g.columns))
         common_columns = [i for i in common_columns if i!='p']
-        
+
         if len(common_columns) == 0:
             return None
         joined_df = f.merge(g, on=common_columns, how="outer")
@@ -39,7 +39,7 @@ class BNReasoner:
         joined_df['p'] = joined_df['p_x'] * joined_df['p_y']
         joined_df.drop(['p_x', 'p_y'], axis=1, inplace=True)
         return joined_df
-        
+
     def network_prune(self, G, Q, E):
 
         G_copy = deepcopy(G)
@@ -98,7 +98,7 @@ class BNReasoner:
     def maxing_out(self, X, f):
         df = f.copy(deep=True)
         gby_list = [e for e in list(df.columns) if e not in ['p', X] and not e.startswith("inst_")]
-        
+
         if len(gby_list) !=0:
             idx = df.groupby(by=gby_list)['p'].transform(max) == df['p']
             df = df[idx].reset_index(drop=True)
@@ -107,8 +107,8 @@ class BNReasoner:
             df = df[df['p'] == df['p'].max()]
 
         df = df.rename(columns={X: "inst_"+X})
-
         return df
+
 
     def min_degree(self):
 
@@ -124,7 +124,7 @@ class BNReasoner:
         return ordering_set
 
     def min_fill_graph(self,graph):
-        
+
         mf_heuristic = list(graph.nodes)[0]
         f_val = 0
         for node in graph.nodes:
@@ -138,7 +138,6 @@ class BNReasoner:
                 f_val = f_count
 
         return mf_heuristic
-
 
     def min_fill(self):
 
@@ -168,7 +167,7 @@ class BNReasoner:
         return ordering_set
 
     def factor_multiplication_multiple(self, f_list):
-        
+
             f_a = f_list.pop(0)
             while len(f_list) > 0:
                 f_b = f_list.pop(0)
@@ -177,9 +176,9 @@ class BNReasoner:
                     f_a = f_c
                 else:
                     f_list.append(f_b)
-            
+
             return f_a
-    
+
     def variable_elimination(self, cpt_dict, ordering_set = None, elim_type = 'sumout', X = None):
 
         if ordering_set is None:
@@ -194,14 +193,14 @@ class BNReasoner:
             elif elim_type == 'maxout':
                 joint_df = self.factor_multiplication_multiple([current_cpt_dict[x] for x in sum_out_list])
                 df_wo_var = self.maxing_out(var, joint_df)
-                
+
             for d_var in sum_out_list:
                 current_cpt_dict.pop(d_var)
                 if df_wo_var is not None:
                     current_cpt_dict['wo_'+var] = df_wo_var
 
         if elim_type == 'sumout':
-            return current_cpt_dict 
+            return current_cpt_dict
         elif elim_type == 'maxout':
             return current_cpt_dict
 
@@ -223,7 +222,7 @@ class BNReasoner:
     def joint_marginal(self, Q, evidence=None):
 
         cpt_list = self.bn.get_all_cpts()
-        
+
         if evidence is None or evidence == {}:
             evidence_cpt_list = deepcopy(cpt_list)
         else:
@@ -252,7 +251,7 @@ class BNReasoner:
         total_ordering_set = self.ordering(ordering_heuristics= "min_degree")
         Q_ordering_set = [x for x in total_ordering_set if x in Q]
         elim_ordering_set = [x for x in total_ordering_set if x not in Q]
-    
+
         joint_marginal_cpts = self.variable_elimination(evidence_cpt_list, ordering_set=elim_ordering_set, elim_type = 'sumout')
 
         joint_marginal_cpts = self.variable_elimination(joint_marginal_cpts, ordering_set = Q_ordering_set, elim_type = 'maxout')
@@ -276,6 +275,8 @@ class BNReasoner:
         else:
             final_factor_multiplication = list(joint_marginal_df.values())[0]
         return final_factor_multiplication[final_factor_multiplication['p'] == final_factor_multiplication['p'].max()]
+
+
 
 #dog_example_path = 'testing/dog_problem.BIFXML'
 #dog_example_path = 'testing/lecture_example.BIFXML'
@@ -303,5 +304,66 @@ x = le2_bn.bn.get_all_cpts()
 print(le2_bn.most_probable_explanation({'J': True, 'O': False}))
 
 #print(abc, inst)
-#%%
+
+
+
+
+# run the factor multiplication test
+
+def test_factor_multiplication():
+    """
+
+
+    Parameters
+    ----------
+    factor1 : Dataframe CPT of first factor.
+    factor2 : Dataframe CPT of second factor.
+
+    Returns
+    -------
+    None. Prints out checks for a test case of factor multiplication
+
+    """
+    dog_example_path = 'testing/dog_problem.BIFXML'
+
+    dog_bn = BNReasoner(dog_example_path)
+
+    x = dog_bn.bn.get_all_cpts()
+
+    print('TEST CASE: factor multiplication:')
+    print('Testing with inputs Light on and Dog out:')
+    print('Light on \n ----- \n')
+    print(x['light-on'])
+    print('Dog out \n ----- \n')
+    print(x['dog-out'])
+    print("\n Factor multiplication \n --------------- \n")
+    asdf_factoreddf = dog_bn.factor_multiplication(x['light-on'], x['dog-out'])
+
+    # Test output with predefined correct test case
+    correctoutputs = [0.594, 0.006, 0.582,
+                      0.018,
+                      0.396,
+                      0.004,
+                      0.388,
+                      0.012,
+                      0.045000000000000005,
+                      0.005000000000000001,
+                      0.015,
+                      0.034999999999999996,
+                      0.855,
+                      0.095,
+                      0.285,
+                      0.6649999999999999]
+    incorrect_cases = []
+    for i in range(len(asdf_factoreddf['p'])):
+        if (correctoutputs[i] != asdf_factoreddf['p'][i]):
+            incorrect_cases.append(asdf_factoreddf['p'][i])
+
+    if not incorrect_cases:
+        print('Factor Multiplication tested correct')
+    else:
+        print('Factor Multiplication tested incorrect')
+
+
+test_factor_multiplication()
 
