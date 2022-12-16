@@ -1,8 +1,15 @@
 from typing import Union
+
+import networkx
+
 from BayesNet import BayesNet
 from copy import deepcopy
 import pandas as pd
 import numpy as np
+import random
+import time
+import itertools
+
 
 class BNReasoner:
     def __init__(self, net: Union[str, BayesNet]):
@@ -87,24 +94,77 @@ class BNReasoner:
             df_ret = df.drop(X, axis=1).groupby(by=gby_list).sum().reset_index()
             return df_ret
 
+
     def maxing_out(self, X, f):
         df = f.copy(deep=True)
-        gby_list = [e for e in list(df.columns) if e not in ['p', X]]
+        gby_list = [e for e in list(df.columns) if e not in ['p', X] and not e.startswith("inst_")]
+        
+        if len(gby_list) !=0:
+            idx = df.groupby(by=gby_list)['p'].transform(max) == df['p']
+            df = df[idx].reset_index(drop=True)
+            df = df.groupby(by=gby_list).last().reset_index()
+        else:
+            df = df[df['p'] == df['p'].max()]
 
-        idx = df.groupby(by=gby_list)['p'].transform(max) == df['p']
-        df = df[idx].reset_index(drop=True)
-        print(df)
-        print(X)
-        instantiation = {X: df[X][0]}
+        df = df.rename(columns={X: "inst_"+X})
 
-        df_ret = df.drop(X, axis=1)
+        return df
 
-        return df_ret, instantiation
+    def min_degree(self):
+
+        ordering_set = []
+        graph = self.bn.get_interaction_graph()
+
+        while len(graph.nodes) > 0:
+            min_degree_node = min(graph.nodes, key=graph.degree)
+            ordering_set.append(min_degree_node)
+            graph.remove_node(min_degree_node)
+
+        print(ordering_set)
+        return ordering_set
+
+    def min_fill_graph(self,graph):
+        
+        mf_heuristic = list(graph.nodes)[0]
+        f_val = 0
+        for node in graph.nodes:
+            f_count = 0
+            node_neighbors = graph.neighbors(node)
+            for n1,n2 in itertools.combinations(node_neighbors,2):
+                if n1 not in graph.neighbors(n2):
+                    f_count +=1
+            if f_count < f_val:
+                mf_heuristic = node
+                f_val = f_count
+
+        return mf_heuristic
 
 
-    def ordering(self, X):
+    def min_fill(self):
 
-        ordering_set = set(self.bn.get_all_variables()) - set(X)
+        ordering_set = []
+        graph = self.bn.get_interaction_graph()
+        while len(graph.nodes) > 0:
+            min_degree_node = self.min_fill_graph(graph)
+            ordering_set.append(min_degree_node)
+            graph.remove_node(min_degree_node)
+        return ordering_set
+
+
+    def ordering(self, ordering_heuristics = "minfill", X = None):
+
+        if ordering_heuristics == "random":
+            if X is not None:
+                ordering_set = set(self.bn.get_all_variables()) - set(X)
+            else:
+                ordering_set = set(self.bn.get_all_variables())
+            ordering_set = list(ordering_set)
+            random.shuffle(ordering_set)
+        elif ordering_heuristics == "min_fill":
+            ordering_set = self.min_fill()
+        elif ordering_heuristics == "min_degree":
+            ordering_set = self.min_degree()
+
         return ordering_set
 
     def factor_multiplication_multiple(self, f_list):
@@ -119,44 +179,31 @@ class BNReasoner:
                     f_list.append(f_b)
             
             return f_a
-    def variable_elimination(self, X, cpt_updated_evidence, elim_type = 'sumout'):
+    
+    def variable_elimination(self, cpt_dict, ordering_set = None, elim_type = 'sumout', X = None):
 
-        ordering_set = self.ordering(X)
-        #print(ordering_set)
-        current_cpt_list = deepcopy(cpt_updated_evidence)
-        if elim_type == 'maxout':
-            instantiation_dict = {}
+        if ordering_set is None:
+            ordering_set = self.ordering(ordering_heuristics= "min_degree", X = X)
+        current_cpt_dict = deepcopy(cpt_dict)
         for var in ordering_set:
-            sum_out_list = [x for x in current_cpt_list.keys() if var in current_cpt_list[x].columns]
-            #print("12",sum_out_list)
+            sum_out_list = [x for x in current_cpt_dict.keys() if var in current_cpt_dict[x].columns]
             if elim_type == 'sumout':
-                joint_df = self.factor_multiplication_multiple([current_cpt_list[x] for x in sum_out_list])
+                joint_df = self.factor_multiplication_multiple([current_cpt_dict[x] for x in sum_out_list])
                 df_wo_var = self.calulate_marginalisation(var, joint_df)
-                #print("123", df_wo_var)
-            for d_var in sum_out_list:
-                current_cpt_list.pop(d_var)
-                if df_wo_var is not None:
-                    current_cpt_list['wo_'+var] = df_wo_var
 
-            """
-            sum_out_a = current_cpt_list[sum_out_list[0]]
-            for sum_out_b in sum_out_list[1:]:
-                #print("33",sum_out_b)
-                sum_out_a = self.factor_multiplication(sum_out_a, current_cpt_list[sum_out_b])
-                if elim_type == 'sumout':
-                    df_wo_var = self.calulate_marginalisation(var, sum_out_a)
-                elif elim_type == 'maxout':
-                    df_wo_var, instantiation = self.maxing_out(var, sum_out_a)
-                    instantiation_dict = {**instantiation_dict, **instantiation}
-            """
-        #print(current_cpt_list)
-        final_joint_df = self.factor_multiplication_multiple(list(current_cpt_list.values()))
-            
-        #print(current_cpt_list)
+            elif elim_type == 'maxout':
+                joint_df = self.factor_multiplication_multiple([current_cpt_dict[x] for x in sum_out_list])
+                df_wo_var = self.maxing_out(var, joint_df)
+                
+            for d_var in sum_out_list:
+                current_cpt_dict.pop(d_var)
+                if df_wo_var is not None:
+                    current_cpt_dict['wo_'+var] = df_wo_var
+
         if elim_type == 'sumout':
-            return final_joint_df
+            return current_cpt_dict 
         elif elim_type == 'maxout':
-            return df_wo_var, instantiation_dict
+            return current_cpt_dict
 
 
     def update_cpt_with_evidence(self, cpt, evidence):
@@ -182,9 +229,14 @@ class BNReasoner:
         else:
             evidence_cpt_list = self.update_cpt_with_evidence(cpt_list, evidence)
 
-        joint_marginal_df = self.variable_elimination(Q, evidence_cpt_list, elim_type = 'sumout')
+        total_ordering_set = self.ordering(ordering_heuristics="min_degree")
+        Q_ordering_set = [x for x in total_ordering_set if x in Q]
+        elim_ordering_set = [x for x in total_ordering_set if x not in Q]
 
-        return joint_marginal_df
+        joint_marginal_cpts = self.variable_elimination(evidence_cpt_list, ordering_set=elim_ordering_set, elim_type = 'sumout')
+        final_joint_df = self.factor_multiplication_multiple(joint_marginal_cpts)
+
+        return final_joint_df
 
     def marginal_distribution(self, Q, e=None):
 
@@ -197,19 +249,33 @@ class BNReasoner:
 
         default_cpt_list = self.bn.get_all_cpts()
         evidence_cpt_list = self.update_cpt_with_evidence(default_cpt_list, e)
-        #maxout_return, instantiation = self.variable_elimination(Q, evidence_cpt_list, elim_type='maxout')
-        marginals_df = self.joint_marginal(Q, evidence=e)
-        print(marginals_df)
+        total_ordering_set = self.ordering(ordering_heuristics= "min_degree")
+        Q_ordering_set = [x for x in total_ordering_set if x in Q]
+        elim_ordering_set = [x for x in total_ordering_set if x not in Q]
+    
+        joint_marginal_cpts = self.variable_elimination(evidence_cpt_list, ordering_set=elim_ordering_set, elim_type = 'sumout')
+
+        joint_marginal_cpts = self.variable_elimination(joint_marginal_cpts, ordering_set = Q_ordering_set, elim_type = 'maxout')
+
+        print("H1 \n",joint_marginal_cpts)
         #return maxout_return, instantiation
 
-    def most_probability_explanation(self, e):
+    def most_probable_explanation(self, e):
 
         default_cpt_list = self.bn.get_all_cpts()
-        evidence_cpt_list = self.update_cpt_with_evidence(default_cpt_list, e)
+        evidence_cpt_dict = self.update_cpt_with_evidence(default_cpt_list, e)
 
+        total_ordering_set = self.ordering(ordering_heuristics= "min_fill")
 
+        joint_marginal_dict = evidence_cpt_dict
+        for elim_var in total_ordering_set:
+            joint_marginal_df = self.variable_elimination(joint_marginal_dict, ordering_set=set(elim_var), elim_type='maxout')
 
-
+        if len(joint_marginal_df) > 1:
+            final_factor_multiplication = self.factor_multiplication_multiple(list(joint_marginal_df.values()))
+        else:
+            final_factor_multiplication = list(joint_marginal_df.values())[0]
+        return final_factor_multiplication[final_factor_multiplication['p'] == final_factor_multiplication['p'].max()]
 
 #dog_example_path = 'testing/dog_problem.BIFXML'
 #dog_example_path = 'testing/lecture_example.BIFXML'
@@ -230,9 +296,12 @@ x = le2_bn.bn.get_all_cpts()
 #print(x1)
 
 #abc = le2_bn.marginal_distribution(['Wet Grass?',"Slippery Road?"], {'Winter?': True, 'Sprinkler?': False})
-abc = le2_bn.marginal_distribution(["J","O"])
-print(abc)
-#abc, inst = le2_bn.maximum_a_posteriori(['I',"J"], {'O': True})
+#abc = le2_bn.marginal_distribution(["J","O"])
+#print(abc)
+#abc = le2_bn.maximum_a_posteriori(['I',"J"], {'O': True})
+
+print(le2_bn.most_probable_explanation({'J': True, 'O': False}))
+
 #print(abc, inst)
 #%%
 
