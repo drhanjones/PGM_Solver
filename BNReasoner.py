@@ -277,6 +277,151 @@ class BNReasoner:
         return final_factor_multiplication[final_factor_multiplication['p'] == final_factor_multiplication['p'].max()]
 
 
+    
+
+def choose_number_of_connections(node):
+    """
+    
+
+    Parameters
+    ----------
+    node : the node we need to make connections for.
+
+    Returns
+    -------
+    num_connections : a random number of connections we want to make for each node
+
+    """
+    print('Choosing number of connections for node number', node)
+    # the first node is the tree starting so can't be directed to anything yet
+    if node == 1:
+        num_connections = 0
+        print('not connecting any yet because this is the tree starting')
+    # other nodes can be directed
+    # we could do
+    # num_connections = random.randint(1, node-1)
+    # but the graph becomes too large so
+    # limit max connections size to 5
+    # if we already have more than 4 nodes
+    elif node-1 > 4:
+        num_connections = random.randint(1, 5)
+    else:
+        num_connections = random.randint(1, node-1)
+    print('decided on ', num_connections, 'source nodes for node', node)
+    return num_connections
+
+
+def make_truth_table(node, directed_connections, num_connections):
+    """
+    
+
+    Parameters
+    ----------
+    node : the node which we need to make our truth table for.
+    directed_connections : the connections the node has.
+    num_connections : how many connections the node has.
+
+    Returns
+    -------
+    asdf_truthtable : the truth table as a dataframe (as required by BayesNet).
+
+    """    
+    # how many times each value can be repeated, eg False False False is 3 repeats
+    complete_truthtable = []
+    initialize_truthtable = list(itertools.product([True, False], repeat=num_connections+1))
+    
+    # t=0
+    # other_t = 1-t
+    for statement in initialize_truthtable:
+        # p = copy.copy(t)
+        # other_p = 1-p
+        if statement[-1] == True:
+            t = random.uniform(0,1)
+            # print('p is', t)
+            # print('IN HERE')
+            complete_truthtable.append(list(statement)+[t])
+        if statement[-1] == False:
+            other_t=1-t
+            # print('other p is', other_t)
+            complete_truthtable.append(list(statement)+[other_t])
+    
+    # create header for dataframe
+    header = []
+    for nodename in directed_connections:
+        header.append(nodename)
+    header.append(str(node))
+    header.append('p')
+    
+    asdf_truthtable = pd.DataFrame(data = complete_truthtable, 
+                    columns = header)
+
+    print('the truth table \n', asdf_truthtable)
+
+    return asdf_truthtable
+
+def choose_nodes_to_connect(nodes_so_far, num_connections):
+    """
+    
+
+    Parameters
+    ----------
+    nodes_so_far : list of the nodes that we have added to the graph so far.
+    num_connections : how many connections we should make.
+
+    Returns
+    -------
+    a list of the connections we want to make between nodes.
+
+    """
+    return list(np.random.choice(nodes_so_far, size=num_connections, replace=False))
+    
+    
+def makeBayes(initial_BayesNet, num_nodes):
+    # initialize everything
+    dictoftruthtables = {}
+    nodes_so_far = []
+    connections = []
+    
+    # for each node (iterate from 1 to last node since its intuitive)
+    for node in range(1, num_nodes+1):
+        print('Working on node', node)
+        num_connections = choose_number_of_connections(node)
+
+        # randomly choose which nodes to connect
+        directed_connections = choose_nodes_to_connect(nodes_so_far, num_connections)
+        print('Chosen nodes to connect', directed_connections)
+        
+        # make a truth table for these dependencies
+        truth_table = make_truth_table(str(node), directed_connections, len(directed_connections))
+        
+        # add the connections to our list of total connections
+        for eachnode in directed_connections:
+            connections.append([eachnode]+[str(node)])
+        print('created connections', connections)
+
+        # put our truth table into a dict as required by BayesNet
+        dictoftruthtables[str(node)] = truth_table
+        # add our node into the list of nodes we have so far
+        nodes_so_far.append(str(node))
+    
+    # we have all our nodes at the end of the loop
+    final_nodes =  nodes_so_far   
+    # input our generated nodes, connections and truth tables into the BayesNet creator
+    # connections need to be in tuple format as required by BayesNet
+    initial_BayesNet.create_bn(final_nodes, list(map(tuple, connections)), dictoftruthtables)
+    print('\n Enjoy this BayesNet I made for you :) \n -------------------- \n ')
+    initial_BayesNet.draw_structure()
+    return initial_BayesNet
+
+
+
+
+################ Create random BayesNet ###############
+
+numberofnodes = 7
+initial_BayesNet = BayesNet()
+finished_BayesNet = makeBayes(initial_BayesNet, numberofnodes)
+
 
 #dog_example_path = 'testing/dog_problem.BIFXML'
 #dog_example_path = 'testing/lecture_example.BIFXML'
