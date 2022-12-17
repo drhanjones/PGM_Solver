@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+
+<!--Author: Venkat Mohit, Abhishek, Ruthu
+    Bayesian network in XMLBIF v0.3 (BayesNet Interchange Format)
+ -->
+
+<!-- DTD for the XMLBIF 0.3 format -->
+<!DOCTYPE BIF [
+	<!ELEMENT BIF ( NETWORK )*>
+	      <!ATTLIST BIF VERSION CDATA #REQUIRED>
+	<!ELEMENT NETWORK ( NAME, ( PROPERTY | VARIABLE | DEFINITION )* )>
+	<!ELEMENT NAME (#PCDATA)>
+	<!ELEMENT VARIABLE ( NAME, ( OUTCOME |  PROPERTY )* ) >
+	      <!ATTLIST VARIABLE TYPE (nature|decision|utility) "nature">
+	<!ELEMENT OUTCOME (#PCDATA)>
+	<!ELEMENT DEFINITION ( FOR | GIVEN | TABLE | PROPERTY )* >
+	<!ELEMENT FOR (#PCDATA)>
+	<!ELEMENT GIVEN (#PCDATA)>
+	<!ELEMENT TABLE (#PCDATA)>
+	<!ELEMENT PROPERTY (#PCDATA)>
+]>
+
+<BIF VERSION="0.3">
+<NETWORK>
+    <NAME>Lecture Example</NAME>
+
+    <!-- Variables-->
+    <VARIABLE TYPE="nature">
+        <NAME>Plates moving away?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+        <NAME>Magma level high?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+        <NAME>Earthquake?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+        <NAME>Volcanic Eruption?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+        <NAME>Lateral blast?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+        <NAME>Debris avalanche?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+        <NAME>Aerial drops?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+        <NAME>Tsunami?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE>
+    <VARIABLE TYPE="nature">
+        <NAME>Evacuation?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE>    
+    <VARIABLE TYPE="nature">
+        <NAME>Take cover?</NAME>
+        <OUTCOME>True</OUTCOME>
+        <OUTCOME>False</OUTCOME>
+    </VARIABLE> 
+    
+    <!-- PCTs -->
+    <DEFINITION>
+        <FOR>Plates moving away?</FOR>
+        <TABLE>0.7 0.3</TABLE>
+    </DEFINITION>
+    
+    <DEFINITION>
+        <FOR>Magma level high?</FOR>
+        <GIVEN>Plates moving away?</GIVEN>
+        <TABLE>1.0 0.0 0.4 0.6</TABLE>
+    </DEFINITION>
+    <DEFINITION>
+        <FOR>Earthquake?</FOR>
+        <GIVEN>Plates moving away?</GIVEN>
+        <TABLE>0.3 0.7 0.6 0.4</TABLE>
+    </DEFINITION>
+    <DEFINITION>
+        <FOR>Volcanic Eruption?</FOR>
+        <GIVEN>Magma level high?</GIVEN>
+        <TABLE>0.9 0.1 0.2 0.8</TABLE>
+    </DEFINITION>
+    <DEFINITION>
+        <FOR>Lateral blast?</FOR>
+        <GIVEN>Volcanic Eruption?</GIVEN>
+        <TABLE>1.0 0.0 0.6 0.4</TABLE>
+    </DEFINITION>
+    <DEFINITION>
+        <FOR>Debris avalanche?</FOR>
+        <GIVEN>Volcanic Eruption?</GIVEN>
+        <TABLE>1.0 0.0 0.3 0.7</TABLE>
+    </DEFINITION>
+    <DEFINITION>
+        <FOR>Aerial drops?</FOR>
+        <GIVEN>Lateral blast?</GIVEN>
+        <TABLE>1.0 0 0.3 0.7</TABLE>
+    </DEFINITION>    
+    <DEFINITION>
+        <FOR>Tsunami?</FOR>
+        <GIVEN>Earthquake?</GIVEN>
+        <GIVEN>Debris avalanche?</GIVEN>
+        <TABLE>1.0 0.0 0.5 0.5 0.4 0.6 0.1 0.9</TABLE> <!--Order? Earthquake?, Debris avalanche?, Tsunami?-->
+    </DEFINITION>   
+    
+    <DEFINITION>
+        <FOR>Take cover?</FOR>
+        <GIVEN>Earthquake?</GIVEN>
+        <TABLE>1.0 0.0 0.0 1.0</TABLE>
+    </DEFINITION>
+    <DEFINITION>
+        <FOR>Evacuation?</FOR>
+        <GIVEN>Tsunami?</GIVEN>
+        <GIVEN>Aerial drops?</GIVEN>
+        <TABLE>1.0 0.0 0.0 1.0 0.0 1.0 0.0 1.0</TABLE> <!-- Order? Tsunami?, Aerial drops?, Evacuation?-->
+    </DEFINITION>    
+    
+</NETWORK>
+</BIF>
