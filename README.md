@@ -1,4 +1,14 @@
-# Useful Pointers for Assignment 2 of KR21
+# Assignment 2 KR 2022
+
+## File descriptions
+
+BNReasoner.py contains implemented methods.
+
+BNReasoner_testing.py contains various functions to test methods in BNReasoner.
+
+custom_model_test.py is to test the custom Bayes network model built for the assignment.
+
+analyzeresults.py builds graphs and datasets that assist in analyzing the data generated from tests run on the methods and reasoner constructed in BNReasoner.py.
 
 ## BIFXML file format
 The BIFXML file format is meant to provide an easy means of exchanging Bayesian networks. It works with standard XML
