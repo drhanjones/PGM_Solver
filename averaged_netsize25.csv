@@ -1,0 +1,15 @@
+node_size,ordering_heuristic,evidence_size,evidence_type,iterations,ave time_taken
+25.0,min_degree,1.0,Lowest Evidence,0.0,5.668642545
+25.0,min_degree,6.0,25% Evidence,0.0,0.5270211935
+25.0,min_degree,12.0,50% Evidence,0.0,0.3444843769
+25.0,min_degree,19.0,75% Evidence,0.0,0.3478955746
+25.0,min_degree,24.0,Maximum Evidence,0.0,0.3311621189
+25.0,min_fill,1.0,Lowest Evidence,0.0,3.286877203
+25.0,min_fill,6.0,25% Evidence,0.0,0.4970799208
+25.0,min_fill,12.0,50% Evidence,0.0,0.353138113
+25.0,min_fill,19.0,75% Evidence,0.0,0.3497560024
+25.0,min_fill,24.0,Maximum Evidence,0.0,0.3556591034
+25.0,random,1.0,Lowest Evidence,0.0,4.129315925
+25.0,random,6.0,25% Evidence,0.0,0.5307920456
+25.0,random,12.0,50% Evidence,0.0,0.3477824926
+25.0,random,19.0,75% Evidence,0.0,0.329321003
